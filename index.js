@@ -51,7 +51,7 @@ wss.on("connection", (ws) => {
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow requests from your frontend
+    origin: "https://oms.fronus.com:80", // Allow requests from your frontend
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow these HTTP methods
     allowedHeaders: ["Content-Type", "Authorization"], // Allow these headers
   })
