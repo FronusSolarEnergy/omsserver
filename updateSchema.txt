@@ -1,0 +1,153 @@
+// Function to remove comments from SQL content
+function removeComments(sqlContent) {
+    // Remove single-line comments
+    const singleLineCommentPattern = /--.*?\n/g;
+    sqlContent = sqlContent.replace(singleLineCommentPattern, ' ');
+
+    // Remove multi-line comments
+    const multiLineCommentPattern = /\/\*[\s\S]*?\*\//g;
+    sqlContent = sqlContent.replace(multiLineCommentPattern, ' ');
+
+    return sqlContent;
+}
+
+// Function to validate SQL content
+function isValidSQL(sqlContent) {
+    // Simple check for common SQL commands
+    const sqlCommands = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE'];
+    return sqlCommands.some(command => sqlContent.trim().toUpperCase().startsWith(command));
+}
+
+// Function to read and execute SQL from a file
+function readAndExecuteSQLFile(db, filePath) {
+    checkDatabaseConnection(db);
+
+    if (!fs.existsSync(filePath)) {
+        console.error(`SQL file not found: ${filePath}`);
+        return;
+    }
+
+    const sqlContent = fs.readFileSync(filePath, 'utf8');
+
+    // Check if the SQL content is empty
+    if (!sqlContent.trim()) {
+        console.error(`SQL file is empty: ${filePath}`);
+        return; // Return if empty
+    }
+
+    // Remove comments from the SQL content
+    const cleanedSQLContent = removeComments(sqlContent).trim();
+
+    // Validate SQL content after removing comments
+    if (!isValidSQL(cleanedSQLContent)) {
+        console.error(`Invalid SQL content in file: ${filePath}`);
+        return; // Skip execution if invalid
+    }
+
+    // Execute the SQL content
+    db.query(cleanedSQLContent, (err, results) => {
+        if (err) {
+            console.error(`Error executing SQL from file: ${filePath}`, err);
+            throw err; // Throw error to handle it in the caller
+        }
+        console.log(`Schema updated successfully from file: ${filePath}`);
+    });
+}
+
+
+
+CREATE TABLE pending_transactions (
+    transaction_id INT AUTO_INCREMENT PRIMARY KEY,                -- Unique identifier for each transaction
+    serviceCenterId INT NOT NULL,                     -- ID of the service center
+    wh_part_id INT NOT NULL,                             -- ID of the part being sent
+    batch_no VARCHAR(50) NOT NULL,                    -- Batch number of the part
+    quantity INT NOT NULL,                            -- Quantity of the part being sent
+    bilty_no VARCHAR(50) NOT NULL,                    -- Bilty number for the transaction
+    status ENUM('Pending', 'Confirmed')   -- Status of the transaction
+        DEFAULT 'Pending',                            -- Default status is 'Pending'
+    date_sent DATETIME DEFAULT CURRENT_TIMESTAMP      -- Timestamp of when the transaction was created
+);
+
+CREATE TABLE parts_used_lab (
+    part_used_id SERIAL PRIMARY KEY, -- Auto-incrementing primary key
+    wh_part_id INT NOT NULL, -- Foreign key for parts_wh table
+    jobcard_serial_no INT NOT NULL, -- Foreign key for jobcard_sc table
+    status ENUM('pending', 'solved', 'delivered') NOT NULL, -- Status with specified values
+    solved_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Timestamp for when the part was solved
+    solved_by VARCHAR(255), -- User name of the person who solved the issue
+    delivered_on TIMESTAMP NULL, -- Timestamp for when the part was delivered (nullable)
+    quantity INT NOT NULL, -- Quantity of the part used
+
+    -- Foreign key constraints
+    FOREIGN KEY (wh_part_id) REFERENCES parts_wh(part_id) ON DELETE CASCADE,
+    FOREIGN KEY (jobcard_serial_no) REFERENCES jobcard_sc(serialNo) ON DELETE CASCADE
+);
+
+
+-- Step 1: Remove the redundant columns
+--/////
+-- ALTER TABLE parts_factory_record
+--   DROP COLUMN container_no,
+--   DROP COLUMN remarks,
+--   DROP COLUMN date;
+--/////
+-- Step 2: Add the container_id foreign key column
+--/////
+-- ALTER TABLE parts_factory_record
+--   ADD COLUMN container_id INT,
+--   ADD CONSTRAINT fk_container
+--     FOREIGN KEY (container_id) REFERENCES containers(container_id)
+--     ON DELETE CASCADE ON UPDATE CASCADE;
+--/////
+-- ALTER TABLE prod_line_requests ADD COLUMN order_number VARCHAR(255) NOT NULL;
+-- ALTER TABLE parts_factory_record
+-- ADD COLUMN remarks TEXT;
+-- ALTER TABLE parts_factory_record ADD COLUMN date DATETIME DEFAULT CURRENT_TIMESTAMP;
+
+
+
+
+
+
+
+
+
+Production Line//////////
+-- CREATE TABLE AllParts (
+--     part_id INT AUTO_INCREMENT PRIMARY KEY,
+--     part_name VARCHAR(255) NOT NULL,
+--     batch_no VARCHAR(50),
+--     quantity INT NOT NULL
+-- );
+
+-- CREATE TABLE PowerTypes (
+--     power_type_id INT AUTO_INCREMENT PRIMARY KEY,
+--     type_name VARCHAR(255) NOT NULL
+-- );
+
+-- CREATE TABLE PartPowerType (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     part_id INT NOT NULL,
+--     power_type_id INT NOT NULL,
+--     FOREIGN KEY (part_id) REFERENCES AllParts(part_id),
+--     FOREIGN KEY (power_type_id) REFERENCES PowerTypes(power_type_id)
+-- );
+
+-- INSERT INTO PowerTypes (type_name) VALUES ('4.2kW'), ('6.2kW');
+
+-- INSERT INTO AllParts (part_name, batch_no, quantity) 
+-- VALUES 
+--     ('Part 1', 'B123', 100), 
+--     ('Part 2', 'B124', 200), 
+--     ('Part 3', 'B125', 150), 
+--     ('Part 4', 'B126', 120), 
+--     ('Part 5', 'B127', 180);
+
+-- INSERT INTO PartPowerType (part_id, power_type_id) 
+-- VALUES 
+--     (1, 1),
+--     (2, 1),
+--     (3, 1), -- Part 3 belongs to 4.2kW
+--     (3, 2), -- Part 3 belongs to 6.2kW
+--     (4, 2),
+--     (5, 2);
